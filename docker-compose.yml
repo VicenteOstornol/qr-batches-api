@@ -1,0 +1,48 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:14.2-alpine
+    container_name: service_db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=lotesapi
+      - POSTGRES_PORT=5432
+      - POSTGRES_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres -d lotesapi'"]
+      interval: 2s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - api_network
+
+  service:
+    container_name: lotesapi_service
+    build:
+      args:
+        - GO_CMD=lotesapi
+      dockerfile: Dockerfile
+      context: "."
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./.env
+    networks:
+      - api_network
+
+volumes:
+  postgres:
+    driver: local
+networks:
+  api_network:
+    driver: bridge
